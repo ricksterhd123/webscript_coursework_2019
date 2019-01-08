@@ -79,7 +79,7 @@ asyncTest(
 );
 
 /*
- * You can't serve files that are not there.  We expect HTTP 
+ * You can't serve files that are not there.  We expect HTTP
  * status codes of 404 in such cases, so we test for these.
  */
 asyncTest(
@@ -112,7 +112,7 @@ asyncTest(
 );
 
 /*
- * This check that you are using the 'square' query parameter correctly 
+ * This check that you are using the 'square' query parameter correctly
  */
 asyncTest(
   `Setting square size`,
@@ -172,43 +172,43 @@ asyncTest(
     let status = await getResponseStatus(assert, 'GET', '/img/0/10');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 1'
     );
 
     status = await getResponseStatus(assert, 'GET', '/img/10/0');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 2'
     );
 
     status = await getResponseStatus(assert, 'GET', '/img/10/-10');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 3'
     );
 
     status = await getResponseStatus(assert, 'GET', '/img/10/0.3');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 4'
     );
 
     status = await getResponseStatus(assert, 'GET', '/img/10.3/10');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 5'
     );
 
     status = await getResponseStatus(assert, 'GET', '/img/harambe/0');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 6'
     );
 
     status = await getResponseStatus(assert, 'GET', '/img/4/kit');
     assert.ok(
       status === 404 || status === 400,
-      'invalid dimensions must return 400 or 404'
+      'invalid dimensions must return 400 or 404 7'
     );
   }
 );
@@ -244,7 +244,7 @@ asyncTest(
 
 /*
  * If a square size query is present is cannot be empty.  Your server should
- send a 400 if it is. 
+ send a 400 if it is.
  */
 asyncTest(
   `Empty (but present) square size`,
@@ -290,7 +290,7 @@ asyncTest(
  * in the appearance of no text.
  */
 asyncTest(
-  `Empty text`, 
+  `Empty text`,
   async (assert) => {
     assert.ok(
       compareArrays(
@@ -309,11 +309,11 @@ asyncTest(
 /*
  *         **   ******   ********   ******  ********   ******
  *        **   **    **     **     **    **    **     **    **
- *       **    **           **     **    **    **     **  
- *      **      ******      **     **    **    **      ******  
- *     **            **     **     ********    **           **  
- *    **       **    **     **     **    **    **     **    **  
- *   **         ******      **     **    **    **      ******  
+ *       **    **           **     **    **    **     **
+ *      **      ******      **     **    **    **      ******
+ *     **            **     **     ********    **           **
+ *    **       **    **     **     **    **    **     **    **
+ *   **         ******      **     **    **    **      ******
  */
 
 asyncTest(
@@ -936,7 +936,7 @@ asyncTest(
 // What's below is just data and functions.
 //
 // When you have all the tasts passing (well done) work on code clarity
-// and maintainability (and remember to keep running the tests so you 
+// and maintainability (and remember to keep running the tests so you
 // can be sure your improvements don't break anything that you already
 // completed).
 
