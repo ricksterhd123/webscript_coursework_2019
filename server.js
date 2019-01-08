@@ -10,33 +10,21 @@ function isInteger(n){
     return Number.isInteger(n) && Number(n) === n && n % 1 === 0;
 }
 
-/* Routing static files */
-app.use('/',express.static('public'));
-/* Start node js server & listen on port */
-app.listen(port);
-
-/* Sending an image */
-app.get('/img/:width/:height', function(req, res){
-    let width = Number(req.params.width)
-    let height = Number(req.params.height)
-    let square = req.query.square
-    console.log(square)
-    console.log(Number(square))
-    let status = getErrorStatus(width, height, square)
-
-    if (status == 200){
-        imager.sendImage(res, width, height, square);
-    } else {
-        res.sendStatus(status)
-    }
-
-});
+/* Check if a given string is blank */
+function isBlank(str) {
+    return (!str || /^\s*$/.test(str));
+}
 
 /*
    Validate width, height, square and text
    Returns: true if valid, false otherwise
 */
-function getErrorStatus(width, height, square){
+function getErrorStatus(req){
+    let width = Number(req.params.width)
+    let height = Number(req.params.height)
+    let length = Object.keys(req.query).length
+    let square = req.query.square
+
 
     if (!Number.isInteger(width) || !Number.isInteger(height) || width == NaN || height == NaN){
         return 404
@@ -46,8 +34,26 @@ function getErrorStatus(width, height, square){
         return 404
     } else if (width == null || width == null){
         return 404
-    } else if (square && (square == 0 || !Number.isInteger(Number(square)))) {
+    } else if (length > 0 && square == undefined) {
+        return 400
+    } else if (square !== undefined && (square <= 0 || square % 1 !== 0)) {
         return 400
     }
     return 200
 }
+
+/* Routing static files */
+app.use('/',express.static('public'));
+/* Start node js server & listen on port */
+app.listen(port);
+
+/* Sending an image */
+app.get('/img/:width/:height', function(req, res){
+    let status = getErrorStatus(req)
+    if (status == 200){
+        imager.sendImage(res, Number(req.params.width), Number(req.params.height), req.query.square, req.query.text);
+    } else {
+        res.sendStatus(status)
+    }
+
+});
