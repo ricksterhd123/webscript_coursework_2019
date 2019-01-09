@@ -1,4 +1,6 @@
 /* Student ID: UP864163 */
+
+/* 1 */
 'use strict';
 const express = require('express');
 const app = express();
@@ -7,6 +9,7 @@ const port = 8080;
 
 /* Statistics */
 let recentPaths = [];
+let recentTexts = [];
 let recentSizes = [];
 
 /* Check if string is blank */
@@ -50,10 +53,7 @@ function bringForwards(arr, index){
     arr.unshift(temp)
 }
 
-/*
-   Check if the path exists (i.e. recent)
-   Returns: index from array 'recentPaths', false if path does not exist.
-*/
+/* Remove duplicate paths */
 function removeDuplicatePaths(width, height, square, text){
     let duplicates = false;
     for (let i = 0; i <= recentPaths.length; i++){
@@ -66,10 +66,20 @@ function removeDuplicatePaths(width, height, square, text){
     return duplicates;
 }
 
-/*
-    Check if the size exists
-    Returns: index from array, false otherwise.
-*/
+/* Remove duplicate texts */
+function removeDuplicateTexts(text){
+    let dup = false;
+    for (let i = 0; i <= recentTexts.length; i++){
+        let txt = recentTexts[i];
+        if (txt == text){
+            bringForwards(recentTexts, i);
+            dup = true;
+        }
+    }
+    return dup;
+}
+
+/* Remove duplicate sizes */
 function removeDuplicateSizes(width, height){
     let duplicates = false;
     for (let i = 0; i <= recentSizes.length; i++){
@@ -82,30 +92,43 @@ function removeDuplicateSizes(width, height){
     return duplicates;
 }
 
-
-/* Save the recent path */
+/* Store path to array removing duplicates */
 function saveRecentPath(width, height, square, text){
     let path = {width: width, height: height, square: square, text: text}
     if (!removeDuplicatePaths(width, height, square, text)){
         recentPaths.unshift(path);
-    } else if (recentPaths.length > 10) {
+    }
+
+    if (recentPaths.length > 10) {
         recentPaths.pop();
     }
-    console.log(recentPaths)
 }
 
-/* Store size to array */
+/* Store text to array removing duplicates */
+function saveRecentText(text){
+
+    if (text && !removeDuplicateTexts(text)){
+        recentTexts.unshift(text);
+    }
+
+    if (recentTexts.length > 10){
+        recentTexts.pop();
+    }
+}
+
+/* Store width and height to array removing duplicates */
 function saveRecentSize(width, height){
     let size = {w: width, h: height};
     if (!removeDuplicateSizes(width, height)){
         recentSizes.unshift(size);
-    } else if (recentSizes.length > 10) {
+    }
+
+    if (recentSizes.length > 10) {
         recentSizes.pop();
     }
-    console.log(recentSizes)
 }
 
-/* Send 10 of the most recent paths back */
+/* Send 10 of the most recent paths */
 function requestRecentPaths(req, res){
     let paths = [];
 
@@ -116,7 +139,7 @@ function requestRecentPaths(req, res){
             let square = path.square
             let text = path.text
 
-            if (square !== null && text){
+            if (square && text){
                 paths.push("/img/" + width + "/" + height + "?square=" + square + "&text=" + encodeURIComponent(text))
             } else if (text && square == null){
                 paths.push("/img/" + width + "/" + height + "?text=" + encodeURIComponent(text))
@@ -131,6 +154,12 @@ function requestRecentPaths(req, res){
     res.send(paths);
 }
 
+/* Send 10 of the most recent texts */
+function requestRecentTexts(req, res){
+    res.send(recentTexts);
+}
+
+/* Send 10 of the most recent sizes */
 function requestRecentSizes(req, res){
     res.send(recentSizes);
 }
@@ -160,6 +189,7 @@ function requestImage(req, res){
         console.log("=================== ")
         saveRecentPath(width, height, square, text);
         saveRecentSize(width, height);
+        saveRecentText(text);
         imager.sendImage(res, width, height, square, text);
 
     } else {
@@ -171,6 +201,8 @@ function requestImage(req, res){
 app.use('/',express.static('public'));
 /* Handle recent paths API */
 app.get('/stats/paths/recent', requestRecentPaths);
+/* Handle recent texts API */
+app.get('/stats/texts/recent', requestRecentTexts);
 /* Handle recent sizes API */
 app.get('/stats/sizes/recent', requestRecentSizes);
 /* Handle image requests API*/
