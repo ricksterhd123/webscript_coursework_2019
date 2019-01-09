@@ -6,14 +6,19 @@ const imager = require('./imager');
 const port = 8080;
 let recentPaths = [];
 
-/* Check if n is an integer */
-function isInteger(n){
-    return (Number.isInteger(n) && Number(n) === n && n % 1 === 0);
-}
-
 /* Check if string is blank */
 function isBlank(str){
     return (!str || /^\s*$/.test(str));
+}
+
+function copy(mainObj) {
+  let objCopy = {}; // objCopy will store a copy of the mainObj
+  let key;
+
+  for (key in mainObj) {
+    objCopy[key] = mainObj[key]; // copies each property to the objCopy object
+  }
+  return objCopy;
 }
 
 /*
@@ -35,39 +40,59 @@ function getErrorStatus(req){
         return 404;
     } else if (width == null || width == null){
         return 404;
-    } else if (length > 0 && square == undefined) {
+    } else if (square == "") {
         return 400;
-    } else if (square !== undefined && (square <= 0 || square % 1 !== 0)) {
+    } else if (square && (square <= 0 || square % 1 !== 0)) {
+        console.log("square error")
         return 400;
     }
     return 200;
 }
 
+/*
+   Check if the path exists (i.e. recent)
+   Returns: index from array 'recentPaths', false if path does not exist.
+*/
 function isPathRecent(width, height, square, text){
     for (let i = 0; i <= recentPaths.length; i++){
-        var path = recentPaths[i];
+        let path = recentPaths[i];
         if (path && width == path['width'] && height == path['height'] && square == path['square'] && text == path['text']) {
-            return true;
+            return i;
         }
     }
     return false;
 }
 
-/* Save the recent path */
-function saveRecentPath(width, height, square, text){
-    if (isPathRecent(width, height, square, text)){
-        return false;
-    }
-
-    let path = {'width': 0, 'height': 0, 'square': null, 'text': false}
-    path.width = width
-    path.height = height
-    path.square = square
-    path.text = text
-    recentPaths.unshift(path)
-    return true;
+/*
+    Take the item at index to the front and shuffle the rest of the elements down
+*/
+function bringPathForwards(index){
+    let temp = recentPaths[index]
+    recentPaths.splice(index, 1)
+    recentPaths.unshift(temp)
 }
 
+/* Save the recent path */
+function saveRecentPath(width, height, square, text){
+    /* Move the path to the front if path already exists */
+    let pathIndex = isPathRecent(width, height, square, text);
+    if (pathIndex){
+        bringPathForwards(pathIndex)
+        console.log(recentPaths)
+        return;
+    }
+    let path = {'width': 0, 'height': 0, 'square': null, 'text': false}
+    path['width'] = width
+    path['height'] = height
+    path['square'] = square
+    path['text'] = text
+    recentPaths.unshift(copy(path))
+    if (recentPaths.length > 10) {
+        recentPaths.pop()
+    }
+    console.log(recentPaths)
+    return true;
+}
 
 /* Send 10 of the most recent paths back */
 function requestRecentPaths(req, res){
@@ -101,34 +126,37 @@ function requestImage(req, res){
     let status = getErrorStatus(req);
 
     if (status == 200){
-        let square = parseInt(req.query.square);
-        square = (isNaN(square) || square == 0) ? null : square;    /* default value is null */
+        /* NOTE: Default square value is null */
+        let square = (req.query.square) ? parseInt(req.query.square) : null;
+        square = (square == 0) ? null : square;
 
+        /* NOTE: Default text value is false */
         let text = req.query.text;
-        text = text || !isBlank(text);                              /* default value is false */
+        text = text || !isBlank(text);
 
         let width = Number(req.params.width);
         let height = Number(req.params.height);
 
         /* Debug */
+        console.log("====================")
         console.log("Width: " + width);
         console.log("Height: " + height);
         console.log("Sqr: " + square);
         console.log("Txt: " + text);
-
-        imager.sendImage(res, width, height, square, text);
+        console.log("=================== ")
         saveRecentPath(width, height, square, text)
+        imager.sendImage(res, width, height, square, text);
+
     } else {
         res.sendStatus(status);
     }
 }
 
-
 /* Route static files */
 app.use('/',express.static('public'));
-/* Handle image requests API*/
-app.get('/img/:width/:height', requestImage);
 /* Handle recent paths API*/
 app.get('/stats/paths/recent', requestRecentPaths);
+/* Handle image requests API*/
+app.get('/img/:width/:height', requestImage);
 /* Start node js server & listen on port */
 app.listen(port);
