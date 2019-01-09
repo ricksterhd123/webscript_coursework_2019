@@ -4,21 +4,14 @@ const express = require('express');
 const app = express();
 const imager = require('./imager');
 const port = 8080;
+
+/* Statistics */
 let recentPaths = [];
+let recentSizes = [];
 
 /* Check if string is blank */
 function isBlank(str){
     return (!str || /^\s*$/.test(str));
-}
-
-function copy(mainObj) {
-  let objCopy = {}; // objCopy will store a copy of the mainObj
-  let key;
-
-  for (key in mainObj) {
-    objCopy[key] = mainObj[key]; // copies each property to the objCopy object
-  }
-  return objCopy;
 }
 
 /*
@@ -43,68 +36,85 @@ function getErrorStatus(req){
     } else if (square == "") {
         return 400;
     } else if (square && (square <= 0 || square % 1 !== 0)) {
-        console.log("square error")
         return 400;
     }
     return 200;
 }
 
 /*
-   Check if the path exists (i.e. recent)
-   Returns: index from array 'recentPaths', false if path does not exist.
+    Take the item at index to the front and shuffle the rest of the elements down
 */
-function isPathRecent(width, height, square, text){
-    for (let i = 0; i <= recentPaths.length; i++){
-        let path = recentPaths[i];
-        if (path && width == path['width'] && height == path['height'] && square == path['square'] && text == path['text']) {
-            return i;
-        }
-    }
-    return false;
+function bringForwards(arr, index){
+    let temp = arr[index]
+    arr.splice(index, 1)
+    arr.unshift(temp)
 }
 
 /*
-    Take the item at index to the front and shuffle the rest of the elements down
+   Check if the path exists (i.e. recent)
+   Returns: index from array 'recentPaths', false if path does not exist.
 */
-function bringPathForwards(index){
-    let temp = recentPaths[index]
-    recentPaths.splice(index, 1)
-    recentPaths.unshift(temp)
+function removeDuplicatePaths(width, height, square, text){
+    let duplicates = false;
+    for (let i = 0; i <= recentPaths.length; i++){
+        let path = recentPaths[i];
+        if (path && width == path.width && height == path.height && square == path.square && text == path.text) {
+            bringForwards(recentPaths, i);
+            duplicates = true;
+        }
+    }
+    return duplicates;
 }
+
+/*
+    Check if the size exists
+    Returns: index from array, false otherwise.
+*/
+function removeDuplicateSizes(width, height){
+    let duplicates = false;
+    for (let i = 0; i <= recentSizes.length; i++){
+        let size = recentSizes[i];
+        if (size && size.w == width && size.h == height){
+            bringForwards(recentSizes, i);
+            duplicates = true;
+        }
+    }
+    return duplicates;
+}
+
 
 /* Save the recent path */
 function saveRecentPath(width, height, square, text){
-    /* Move the path to the front if path already exists */
-    let pathIndex = isPathRecent(width, height, square, text);
-    if (pathIndex){
-        bringPathForwards(pathIndex)
-        console.log(recentPaths)
-        return;
-    }
-    let path = {'width': 0, 'height': 0, 'square': null, 'text': false}
-    path['width'] = width
-    path['height'] = height
-    path['square'] = square
-    path['text'] = text
-    recentPaths.unshift(copy(path))
-    if (recentPaths.length > 10) {
-        recentPaths.pop()
+    let path = {width: width, height: height, square: square, text: text}
+    if (!removeDuplicatePaths(width, height, square, text)){
+        recentPaths.unshift(path);
+    } else if (recentPaths.length > 10) {
+        recentPaths.pop();
     }
     console.log(recentPaths)
-    return true;
+}
+
+/* Store size to array */
+function saveRecentSize(width, height){
+    let size = {w: width, h: height};
+    if (!removeDuplicateSizes(width, height)){
+        recentSizes.unshift(size);
+    } else if (recentSizes.length > 10) {
+        recentSizes.pop();
+    }
+    console.log(recentSizes)
 }
 
 /* Send 10 of the most recent paths back */
 function requestRecentPaths(req, res){
     let paths = [];
-    console.log("Length: " + recentPaths.length)
-    for (let i = 0; i <= recentPaths.length; i++){
-        let path = recentPaths[i]
+
+    recentPaths.forEach(path => {
         if (path) {
-            let width = path['width']
-            let height = path['height']
-            let square = path['square']
-            let text = path['text']
+            let width = path.width
+            let height = path.height
+            let square = path.square
+            let text = path.text
 
             if (square !== null && text){
                 paths.push("/img/" + width + "/" + height + "?square=" + square + "&text=" + encodeURIComponent(text))
@@ -116,9 +126,13 @@ function requestRecentPaths(req, res){
                 paths.push("/img/" + width + "/" + height)
             }
         }
-    }
+    });
 
-    res.send(paths)
+    res.send(paths);
+}
+
+function requestRecentSizes(req, res){
+    res.send(recentSizes);
 }
 
 /* Send image on request */
@@ -144,7 +158,8 @@ function requestImage(req, res){
         console.log("Sqr: " + square);
         console.log("Txt: " + text);
         console.log("=================== ")
-        saveRecentPath(width, height, square, text)
+        saveRecentPath(width, height, square, text);
+        saveRecentSize(width, height);
         imager.sendImage(res, width, height, square, text);
 
     } else {
@@ -154,8 +169,10 @@ function requestImage(req, res){
 
 /* Route static files */
 app.use('/',express.static('public'));
-/* Handle recent paths API*/
+/* Handle recent paths API */
 app.get('/stats/paths/recent', requestRecentPaths);
+/* Handle recent sizes API */
+app.get('/stats/sizes/recent', requestRecentSizes);
 /* Handle image requests API*/
 app.get('/img/:width/:height', requestImage);
 /* Start node js server & listen on port */
